@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luces en el Metro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#05070d;overflow:hidden;font-family:'Space Grotesk',system-ui,sans-serif;color:#e9eefc}
+#game{position:fixed;inset:0}
+canvas{image-rendering:pixelated;display:block}
+#hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;padding:8px 18px;border-radius:999px;background:rgba(8,12,22,.55);backdrop-filter:blur(6px);font-size:14px;letter-spacing:.06em;z-index:5;opacity:0;transition:opacity .8s}
+.hearts{display:flex;gap:6px}
+.h{width:20px;height:18px;fill:#2a3350;transition:fill .8s,filter .8s}
+.h.on{fill:#ffb84d;filter:drop-shadow(0 0 6px #ffb84d);animation:pop .7s}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.55)}100%{transform:scale(1)}}
+#prompt{position:fixed;bottom:9%;left:50%;transform:translateX(-50%);padding:8px 16px;background:rgba(8,12,22,.65);border:1px solid rgba(255,190,100,.4);border-radius:8px;font-size:15px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:5}
+#dlg{position:fixed;left:50%;bottom:5%;transform:translate(-50%,20px);width:min(760px,92vw);padding:20px 26px;background:rgba(6,9,18,.82);backdrop-filter:blur(8px);border:1px solid rgba(255,200,120,.25);border-radius:14px;opacity:0;pointer-events:none;transition:.3s;z-index:6}
+#dlg.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#who{font-size:13px;color:#ffb84d;margin-bottom:8px;font-weight:500}
+#txt{font-size:19px;line-height:1.5;min-height:58px}
+#opts{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+#opts button{flex:1;min-width:220px;padding:12px 16px;font:inherit;font-size:16px;color:#ffe9c4;background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.45);border-radius:10px;cursor:pointer;text-align:left;transition:.2s}
+#opts button:hover,#opts button:focus-visible{background:rgba(255,184,77,.25);transform:translateY(-2px);outline:none}
+#opts button i{opacity:.55;font-style:normal;margin-right:8px}
+#start{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;background:radial-gradient(circle at 50% 55%,rgba(255,180,80,.18),#05070d 60%);transition:opacity 1.2s;cursor:pointer}
+#start.off{opacity:0;pointer-events:none}
+#start h1{font-size:clamp(38px,8vw,84px);font-weight:700;letter-spacing:-.02em;color:#ffd9a0;text-shadow:0 0 40px rgba(255,170,70,.55)}
+#start p{opacity:.7;font-size:16px}
+#start .go{margin-top:18px;opacity:1;animation:bl 2s infinite}
+@keyframes bl{50%{opacity:.3}}
+#end{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity 2.4s ease;display:flex;align-items:center;justify-content:center;z-index:20}
+#end.on{opacity:1;pointer-events:auto}
+#msg{max-width:660px;text-align:center;color:#2a2233;padding:24px;opacity:0;transform:translateY(12px);transition:opacity 1.6s,transform 1.6s}
+#end.msg #msg{opacity:1;transform:none}
+#msg .big{font-size:clamp(24px,4.4vw,38px);line-height:1.25;font-weight:500;margin-bottom:14px}
+#msg .sm{font-size:17px;line-height:1.55;color:#4a4256}
+#msg b{color:#b8631a}
+#again,#next{margin-top:26px;padding:12px 28px;font:inherit;font-size:16px;font-weight:500;color:#fff;background:#d9822b;border:0;border-radius:999px;cursor:pointer;transition:.2s}
+#next{margin-left:8px}#again:hover,#next:hover{background:#b8631a;transform:translateY(-2px)}
+.v{width:16px;height:15px;fill:#3a2a3a;transition:fill .4s}.v.on{fill:#ff6b7a;filter:drop-shadow(0 0 5px #ff6b7a)}#hud .lbl{opacity:.7;font-size:13px}#over{position:fixed;inset:0;background:rgba(5,7,13,.94);opacity:0;pointer-events:none;transition:opacity 1.4s;display:flex;align-items:center;justify-content:center;z-index:20}#over.on{opacity:1;pointer-events:auto}#omsg{max-width:620px;padding:24px;text-align:center}#omsg h2{font-size:clamp(26px,5vw,40px);font-weight:500;color:#ffd9a0;margin-bottom:14px}#omsg p{font-size:17px;line-height:1.6;color:#c9d3ee;margin-bottom:10px}#omsg .tip{color:#ffb84d}#retry{margin-top:16px;padding:12px 28px;font:inherit;font-size:16px;font-weight:500;color:#1a1208;background:#ffb84d;border:0;border-radius:999px;cursor:pointer}
+#mg{position:fixed;inset:0;background:rgba(4,6,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:12;opacity:0;pointer-events:none;transition:opacity .8s}#mg.on{opacity:1;pointer-events:auto}#mgc{max-width:94vw;max-height:64vh;border-radius:10px;box-shadow:0 0 60px rgba(255,170,70,.15)}#mgt{min-height:28px;font-size:18px;color:#ffe9c4;text-align:center;padding:0 16px}#mgh{opacity:.6;font-size:14px}#mgs{background:none;border:1px solid rgba(255,255,255,.25);color:#c9d3ee;padding:6px 14px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer}#mu{position:fixed;left:14px;bottom:14px;z-index:9;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,190,100,.4);background:rgba(8,12,22,.6);color:#ffd9a0;font-size:18px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud"><span id="lvt">Nivel 1 · Soledad</span><span>Conexión: <b id="n">0</b>/3</span><div class="hearts" id="cs">
+<svg class="h" viewBox="0 0 24 22"><path d="M12 21s-9-5.6-9-12A5 5 0 0 1 12 6a5 5 0 0 1 9 3c0 6.4-9 12-9 12z"/></svg>
+<svg class="h" viewBox="0 0 24 22"><path d="M12 21s-9-5.6-9-12A5 5 0 0 1 12 6a5 5 0 0 1 9 3c0 6.4-9 12-9 12z"/></svg>
+<svg class="h" viewBox="0 0 24 22"><path d="M12 21s-9-5.6-9-12A5 5 0 0 1 12 6a5 5 0 0 1 9 3c0 6.4-9 12-9 12z"/></svg>
+</div><span class="lbl">Vida</span><div class="hearts" id="vs"></div></div>
+<div id="prompt">Presiona E para escuchar</div>
+<div id="dlg"><div id="who"></div><div id="txt"></div><div id="opts"></div></div>
+<div id="start"><h1>Luces en el Metro</h1><p>Nivel 1 · Soledad</p><p>Tres personas esperan en una estación vacía. Escucha con cuidado: lo que respondas importa.</p><p>WASD moverte · E escuchar · 1 / 2 / 3 responder</p><p style="opacity:.5;font-size:14px">Este juego trata temas emocionalmente delicados</p><p class="go">Presiona cualquier tecla para empezar</p></div>
+<div id="end"><div id="msg"><p class="big">A veces solo necesitamos que alguien nos escuche.<br>Pedir ayuda es de valientes.</p><p class="sm">Si tú o alguien que conoces lo necesita, habla con alguien de confianza o llama a la <b>Línea de la Vida: 800 911 2000</b> o a <b>SAPTEL: (55) 5259 8121</b>.</p><p class="sm" id="pts" style="margin-top:14px"></p><button id="again">Jugar de nuevo</button><button id="next">Siguiente nivel</button></div></div>
+<div id="mg"><p id="mgh">Encuentra a tus amigos y la salida · WASD / flechas</p><canvas id="mgc" width="744" height="456"></canvas><p id="mgt"></p><button id="mgs">Omitir</button></div>
+<button id="mu" title="Música (M)">♪</button>
+<div id="over"><div id="omsg"><h2>Está bien, no pasa nada.</h2><p>Escuchar es difícil, y equivocarse también es parte de aprender. En la vida real no siempre hay un reinicio, por eso vale la pena intentarlo con calma.</p><p class="tip">Valida lo que la otra persona siente, no lo minimices ni lo compares, y pregunta con cariño.</p><p>Si tú o alguien que conoces lo necesita, la Línea de la Vida (800 911 2000) y SAPTEL ((55) 5259 8121) atienden a cualquier hora.</p><button id="retry">Intentar de nuevo</button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script>
+const W=320,H=180,WW=480,WH=240,T=16;
+const $=id=>document.getElementById(id);
+const el={hud:$('hud'),n:$('n'),prompt:$('prompt'),dlg:$('dlg'),who:$('who'),txt:$('txt'),opts:$('opts'),start:$('start'),end:$('end'),again:$('again'),pts:$('pts'),over:$('over'),retry:$('retry'),vs:$('vs'),nx:$('next')};
+const css=n=>typeof n==='string'?n:'#'+n.toString(16).padStart(6,'0');
+const R=(c,col,x,y,w,h)=>{c.fillStyle=css(col);c.fillRect(x,y,w,h)};
+const gr=n=>{const v=(.3*(n>>16&255)+.55*(n>>8&255)+.15*(n&255))*.72;return ((v*.9)<<16)|(v<<8)|Math.min(255,v*1.2)};
+const dk=n=>(((n>>16&255)*.7)<<16)|(((n>>8&255)*.7)<<8)|((n&255)*.7);
+const AMB=[[0x50,0x60,0x92],[0xb0,0x8e,0x7c]];
+const amb=v=>{const a=LEVELS[window.lv|0].amb[0],b=LEVELS[window.lv|0].amb[1];return (Math.round(a[0]+(b[0]-a[0])*v)<<16)|(Math.round(a[1]+(b[1]-a[1])*v)<<8)|Math.round(a[2]+(b[2]-a[2])*v)};
+const Q=(l,e,r,n,x)=>[l,[['e',e,r],['n',n],['x',x]]];
+const NR=['Ah... claro. Olvídalo.','Siento que no me escuchaste.','Mmm. Da igual.'];
+const XR=['Eso... dolió. Mejor no hablo.','Déjame solo un momento.','No debí decir nada.'];
+const NPC1=[
+{x:47,y:176,hood:1,who:'Mateo',mg:'maze',c:{h:0xe9893c,b:0xe9893c,p:0x3a2f2a,s:0xd8a27c,r:0x2a1d18},rounds:[
+Q('Antes tenía un grupo. Ahora nadie me escribe. Es como si hubiera desaparecido y nadie lo notara.','Suena muy solitario. Gracias por contármelo, aquí estoy.','Es justo eso... solitario. Gracias por no decir que exagero.','Seguro solo están ocupados, no lo tomes tan a pecho.','Pues haz otros amigos, tampoco es tan difícil.'),
+Q('A veces pienso que si yo no estuviera, nadie se daría cuenta.','Gracias por decírmelo. Yo sí me daría cuenta, y me importa cómo estás.','No lo había visto así... me hace sentir menos invisible.','No digas eso, no tiene sentido pensar así.','Deja el drama, todos nos sentimos así a veces.'),
+Q('No sé cómo salir de esto. Siento que no puedo con todo yo solo.','No tienes que hacerlo solo. ¿Hablamos con alguien de confianza? Yo te acompaño.','Creo que puedo hablar con mi tía. ¿Vienes conmigo?','Tú eres fuerte, échale ganas y ya.','Yo qué sé, no soy psicólogo. Ya se te pasará.')]},
+{x:148,y:176,hood:0,who:'Valeria',c:{h:0xd9784e,b:0xc7688a,p:0x2e2a3a,s:0xc99672,r:0x1c1614},rounds:[
+Q('Terminamos anoche. Éramos todo el uno para el otro. Ahora no sé quién soy sin él.','Debe doler muchísimo. No tienes que fingir que estás bien conmigo.','Sí duele... mucho. Gracias por no minimizarlo.','Ya vendrán otros, hay muchos peces en el mar.','Es solo un novio, ya supéralo.'),
+Q('Le escribí como veinte veces y no contesta. Siento que ya nada tiene sentido.','Me preocupa escuchar eso. ¿Has pensado en hacerte daño o en no querer seguir?','A veces se me cruza esa idea, pero no quiero hacerlo. Solo quiero que deje de doler.','Si le escribes menos, seguro te contesta.','Eso es dramatismo, ni que fuera el fin del mundo.'),
+Q('Nunca se lo había dicho a nadie. ¿Ahora qué hago?','Gracias por confiar en mí. Lo que sientes importa: busquemos a un adulto de confianza o llamemos a la Línea de la Vida juntos.','Ok... creo que sí quiero llamar. Pero contigo al lado.','Mejor distráete con otra cosa y ya.','Eso no se le cuenta a nadie, te van a juzgar.')]},
+{x:398,y:176,hood:0,who:'Diego',c:{h:0xf2b03e,b:0xf2b03e,p:0x3b3226,s:0xe0b08a,r:0x5a3a24},rounds:[
+Q('Me mudé hace tres meses. Como solo en la escuela y nadie me habla. Ya me acostumbré... supongo.','Suena muy pesado sentirte solo así. No tienes que acostumbrarte.','Gracias... nadie me había preguntado cómo estoy.','Al menos tienes tiempo para ti, ¿no?','Es que no te esfuerzas en hablar con nadie.'),
+Q('En casa mis papás no ven nada. Prefiero no molestar, ya bastante tienen.','No eres una carga. Lo que sientes también merece espacio. ¿Pensamos cómo decírselo?','Nunca lo vi así... a lo mejor sí merezco que me escuchen.','Seguro tus papás te quieren mucho, no te preocupes.','Pues deja de quejarte y punto.'),
+Q('¿Y si les digo y no me entienden?','Puede dar miedo. Empecemos por alguien seguro: un maestro, un orientador o un familiar. Yo te acompaño.','Hay una orientadora en mi escuela... creo que sí puedo hablar con ella.','Mejor no digas nada, así no hay problema.','Pues entonces aguántate.')]}
+];
+const NPC2=[
+{x:66,y:104,hood:0,who:'Sofía',c:{h:0xd47a9a,b:0xd47a9a,p:0x2e2a3a,s:0xc99672,r:0x1c1614},rounds:[
+Q('Mi abuela murió hace un mes. Todos siguen con su vida y yo siento que me quedé atrapada.','Lo siento muchísimo. Extrañarla tiene todo el sentido, y aquí no tienes que estar bien.','Gracias... casi nadie me deja hablar de ella.','Ella ya descansó, ahora tienes que ser fuerte.','Ya pasó un mes, ¿no crees que ya deberías estar mejor?'),
+Q('Me da culpa reírme o divertirme, como si la estuviera olvidando. Y en las noches me falta el aire de la angustia.','La culpa y la angustia también son parte del duelo. Reírte no significa que la olvides. ¿Cómo era ella?','Cocinaba para todos y cantaba mientras lo hacía... la extraño tanto.','No pienses tanto en eso, mejor distráete.','Eso es exagerar, todo el mundo pierde a alguien.'),
+Q('A veces siento que sin ella nada importa y no tengo ganas de nada.','Me importa lo que dices. ¿Has pensado en hacerte daño? Si lo necesitas, hablemos con un adulto o un psicólogo. Yo te acompaño.','No he pensado en hacerme daño, pero me siento muy vacía. Creo que necesito hablar con alguien... ¿me acompañas?','Todos pasan por eso, ya se te va a quitar.','No hables así, vas a preocupar a tu familia.')]},
+{x:404,y:104,hood:1,who:'Emiliano',c:{h:0xe8a04a,b:0xe8a04a,p:0x3a3040,s:0xd8a27c,r:0x2a1d18},rounds:[
+Q('Mañana tengo que exponer en clase y ya siento que el corazón se me sale. Siempre me pasa.','Suena agotador sentir eso. Tu cuerpo está muy alerta, y es válido que te asuste.','Justo eso... Gracias por no decirme que es fácil.','Solo es una exposición, no es para tanto.','Pues estudia más y ya, no te pongas nervioso.'),
+Q('Pienso que todos se van a reír de mí. A veces prefiero no ir a la escuela.','Esa idea da mucho miedo. ¿Probamos respirar juntos, despacio, contando hasta cuatro?','Inhalo... exhalo... Sí, ayuda un poquito.','Ya verás que todos se olvidan en cinco minutos, relájate.','Pues no vayas, así te ahorras el problema.'),
+Q('No sé si esto es normal. Me da pena decírselo a mis papás.','Sentir ansiedad es común y tiene ayuda. ¿Quieres que hablemos con tus papás o con un orientador juntos?','Creo que sí. Hablaré con la orientadora, y me da menos miedo si vas conmigo.','Seguro se te pasa solo, no lo hagas grande.','Es que eres muy sensible.')]},
+{x:350,y:208,hood:0,who:'Camila',c:{h:0xe07a5a,b:0xe07a5a,p:0x2e3a3a,s:0xe0b08a,r:0x3a2418},rounds:[
+Q('Llevo semanas sin dormir. Mi cabeza no para: y si repruebo, y si nada sale bien, y si defraudo a todos.','Suena como si tu mente no te dejara descansar. Debe ser agotador.','Sí... exacto. Es como si nunca pudiera apagarla.','Solo duerme más temprano y listo.','Estás pensando demasiado, deja de ser tan negativa.'),
+Q('Cuando me ataca la angustia siento que me voy a morir, aunque sé que no.','Gracias por explicarlo. Ahorita estás a salvo. Respiremos juntas: suelta el aire más lento de lo que lo tomas.','Poco a poco se me va bajando... gracias por quedarte.','Eso no puede pasarte, seguro es tu imaginación.','Cálmate, estás haciendo mucho drama.'),
+Q('Me siento sola con todo esto. Como si nadie pudiera entenderme.','No estás sola: me tienes a mí y hay profesionales que ayudan con esto. Busquemos apoyo juntas.','Le voy a decir a mi mamá que quiero ver a un psicólogo. Gracias por escucharme.','Todos tenemos problemas, no eres la única.','Ya supéralo, hay gente con problemas peores.')]}
+];
+const LEVELS=[{t:'Nivel 1 · Soledad',npcs:NPC1,amb:[[0x50,0x60,0x92],[0xb0,0x8e,0x7c]],b:[6,52,468,138]},{t:'Nivel 2 · Ansiedad',npcs:NPC2,amb:[[0x3c,0x58,0x78],[0xc0,0x9c,0x78]],b:[6,44,468,190]}];
+const A={c:null,init(){if(!this.c){this.c=new(window.AudioContext||window.webkitAudioContext)();const o=this.c.createOscillator(),g=this.c.createGain();o.frequency.value=55;g.gain.value=.012;o.connect(g).connect(this.c.destination);o.start()}if(this.c.state==='suspended')this.c.resume()},
+tone(f,t,d,v,ty,a){const c=this.c;if(!c)return;const o=c.createOscillator(),g=c.createGain(),s=c.currentTime+t;o.type=ty||'sine';o.frequency.value=f;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(v,s+(a||.02));g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g).connect(c.destination);o.start(s);o.stop(s+d+.05)},
+tick(){this.tone(300+Math.random()*90,0,.05,.02,'square')},
+chime(){[523.25,659.25,783.99,1046.5].forEach((f,i)=>{this.tone(f,i*.11,1.3,.12);this.tone(f*2,i*.11,.8,.03)})},
+win(){[392,523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>this.tone(f,i*.18,2.6,.09))}};
+
+const M={iv:null,s:0,lit:0,lv:0,mute:false,hz:m=>440*Math.pow(2,(m-69)/12),
+go(lv){this.lv=lv;this.s=0;clearInterval(this.iv);if(A.c)this.iv=setInterval(()=>this.tick(),450)},
+tick(){if(this.mute||!A.c||A.c.state!=='running')return;const R=this.lv?[50,46,53,48]:[45,41,48,43],r=R[(this.s>>3)&3],b=this.s++&7,th=this.lit>=2?4:3;
+if(b===0){[0,th,7].forEach(i=>A.tone(this.hz(r+i),0,4.4,.03,'sine',1.2));A.tone(this.hz(r-12),0,4.4,.045,'sine',1)}
+if(b%2===0&&Math.random()<.8)A.tone(this.hz(r+12+[0,th,7,12,th+12,14][Math.random()*6|0]),0,1.6,.02+this.lit*.007,'triangle',.03)}};
+$('mu').onclick=()=>{M.mute=!M.mute;$('mu').style.opacity=M.mute?.35:1};
+const MG={maze(sc,done){
+const ov=$('mg'),cv=$('mgc'),c=cv.getContext('2d'),tt=$('mgt'),S=24,CW=15,CH=9,GW=CW*2+1,GH=CH*2+1;
+const g=Array.from({length:GH},()=>Array(GW).fill(1)),st=[[1,1]];g[1][1]=0;
+while(st.length){const[x,y]=st[st.length-1],nb=[[2,0],[-2,0],[0,2],[0,-2]].filter(d=>{const nx=x+d[0],ny=y+d[1];return nx>0&&ny>0&&nx<GW-1&&ny<GH-1&&g[ny][nx]});if(!nb.length){st.pop();continue}const d=nb[Math.random()*nb.length|0];g[y+d[1]/2][x+d[0]/2]=0;g[y+d[1]][x+d[0]]=0;st.push([x+d[0],y+d[1]])}
+const far=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]),ex=[GW-2,GH-2],fr=[],rc=()=>[1+2*(Math.random()*CW|0),1+2*(Math.random()*CH|0)];
+for(let i=0;i<800&&fr.length<3;i++){const q=rc();if(far(q,[1,1])>10&&far(q,ex)>8&&fr.every(f=>far(f.p,q)>10))fr.push({p:q})}
+while(fr.length<3)fr.push({p:rc()});
+const keys={},kd=e=>{keys[e.key.toLowerCase()]=1;if(e.key[0]==='A')e.preventDefault()},ku=e=>{delete keys[e.key.toLowerCase()]};
+addEventListener('keydown',kd);addEventListener('keyup',ku);
+const off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;const o=off.getContext('2d');
+const cap=['"Oye... ¿te acuerdas de mí?"','"Te extrañé. ¿Nos juntamos esta semana?"','"Pensé que estabas enojado. Perdón por alejarme."'],base='Encuentra a tus amigos y la salida';
+let px=1,py=1,vx=1,vy=1,rad=70,found=0,last=0,mt=0,msg='',fin=false,raf;const trail=[[1,1]];
+const end=()=>{if(fin)return;fin=true;cancelAnimationFrame(raf);removeEventListener('keydown',kd);removeEventListener('keyup',ku);tt.textContent='Ya no estás solo.';A.chime();setTimeout(()=>{ov.classList.remove('on');done()},2000)};
+$('mgs').onclick=end;
+const hole=(x,y,r,a)=>{const q=o.createRadialGradient(x,y,0,x,y,r);q.addColorStop(0,'rgba(0,0,0,'+a+')');q.addColorStop(.6,'rgba(0,0,0,'+a*.7+')');q.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=q;o.fillRect(x-r,y-r,r*2,r*2)};
+const fig=(x,y,h,b)=>{c.fillStyle=h;c.fillRect(x*S+7,y*S+5,10,7);c.fillStyle='#e0b090';c.fillRect(x*S+9,y*S+8,6,4);c.fillStyle=b;c.fillRect(x*S+8,y*S+12,8,8)};
+const step=t=>{
+if(fin)return;
+if(t-last>115){const dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);let dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);if(dx)dy=0;if((dx||dy)&&!g[py+dy][px+dx]){px+=dx;py+=dy;last=t;trail.push([px,py])}}
+fr.forEach(f=>{if(!f.on&&f.p[0]===px&&f.p[1]===py){f.on=1;found++;f.k=found;msg=cap[found-1];mt=t+3000;A.tone(659,0,.8,.1);A.tone(988,.12,1,.08)}});
+if(px===ex[0]&&py===ex[1]){if(found>=3)return end();if(t>mt){msg='La salida sigue cerrada: faltan amigos por encontrar.';mt=t+2200}}
+vx+=(px-vx)*.3;vy+=(py-vy)*.3;rad+=(60+found*40-rad)*.05;
+c.fillStyle='#0b1222';c.fillRect(0,0,cv.width,cv.height);
+for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){if(g[y][x]){c.fillStyle='#22315a';c.fillRect(x*S,y*S,S,S);c.fillStyle='#31457a';c.fillRect(x*S,y*S,S,3)}else{c.fillStyle=(x+y)%2?'#0f172c':'#0c1326';c.fillRect(x*S,y*S,S,S)}}
+c.fillStyle=found>=3?'#ffd27a':'#3a4560';c.fillRect(ex[0]*S+4,ex[1]*S+2,S-8,S-4);
+fr.forEach(f=>{if(!f.on)fig(f.p[0],f.p[1],'#6a7590','#8a94ad')});
+o.globalCompositeOperation='source-over';o.clearRect(0,0,cv.width,cv.height);o.fillStyle='#04070e';o.fillRect(0,0,cv.width,cv.height);o.globalCompositeOperation='destination-out';
+hole(vx*S+S/2,vy*S+S/2,rad,1);hole(ex[0]*S+S/2,ex[1]*S+S/2,42,found>=3?.9:.25);
+const fl=fr.filter(f=>f.on).map(f=>trail[Math.max(0,trail.length-1-f.k*3)]);
+fl.forEach(q=>hole(q[0]*S+S/2,q[1]*S+S/2,55,.85));
+c.drawImage(off,0,0);
+fl.forEach(q=>fig(q[0],q[1],'#e9893c','#ffb84d'));
+c.globalCompositeOperation='lighter';const w=c.createRadialGradient(vx*S+12,vy*S+12,0,vx*S+12,vy*S+12,rad);w.addColorStop(0,'rgba(255,180,80,.22)');w.addColorStop(1,'rgba(255,180,80,0)');c.fillStyle=w;c.fillRect(vx*S+12-rad,vy*S+12-rad,rad*2,rad*2);c.globalCompositeOperation='source-over';
+fig(vx,vy,'#7a5238','#8a5a3c');c.fillStyle='#ffd27a';c.fillRect(vx*S+16,vy*S+12,3,5);
+tt.textContent=t<mt?msg:base;
+raf=requestAnimationFrame(step)};
+ov.classList.add('on');raf=requestAnimationFrame(step)}};
+class Main extends Phaser.Scene{
+constructor(){super('main')}
+tex(){
+if(this.textures.exists('tiles'))return;
+const mk=(k,w,h,f)=>{const t=this.textures.createCanvas(k,w,h);f(t.context,w,h);t.refresh()};
+mk('tiles',144,16,c=>{
+R(c,0x1c2740,0,0,16,16);for(let y=0;y<16;y+=4){R(c,0x131b31,0,y+3,16,1);const o=(y/4%2)*4;R(c,0x131b31,o,y,1,3);R(c,0x131b31,o+8,y,1,3)}R(c,0x2a3a60,0,0,16,1);
+for(let i=0;i<2;i++){const x=16+i*16;R(c,i?0x24314f:0x283860,x,0,16,16);R(c,0x1b2745,x,0,16,1);R(c,0x1b2745,x,8,16,1);R(c,0x1b2745,x,0,1,16);R(c,0x1b2745,x+8,0,1,16);R(c,0x314675,x+2,2,2,1);R(c,0x314675,x+11,10,2,1)}
+R(c,0x465274,48,0,16,16);R(c,0x5b688b,48,0,16,3);R(c,0x2a3350,48,13,16,3);R(c,0x2a3350,56,0,1,13);
+R(c,0x14111a,64,0,16,16);R(c,0x3b2b25,69,0,6,16);R(c,0x2a1f1c,69,0,1,16);R(c,0x555b6e,64,11,16,3);R(c,0x7a8098,64,11,16,1);
+R(c,0x14111a,80,0,16,16);R(c,0x3b2b25,85,0,6,16);R(c,0x2a1f1c,85,0,1,16);R(c,0x555b6e,80,4,16,3);R(c,0x7a8098,80,4,16,1);R(c,0x28553f,96,0,16,16);R(c,0x3f7d5c,98,3,1,3);R(c,0x3f7d5c,106,9,1,3);R(c,0x3f7d5c,102,12,1,2);R(c,0x2b5c44,112,0,16,16);R(c,0x3f7d5c,115,6,1,3);R(c,0x3f7d5c,121,2,1,3);R(c,0x3f7d5c,124,11,1,2);R(c,0x3f7d5c,118,13,2,1);R(c,0x6f6a78,128,0,16,16);R(c,0x8b869a,131,3,2,1);R(c,0x8b869a,138,8,2,1);R(c,0x8b869a,133,12,1,1);R(c,0x5c5866,140,2,1,1);R(c,0x5c5866,129,9,2,1)});
+mk('bench',44,15,c=>{R(c,0x6a7080,0,0,44,5);R(c,0x8b93a6,0,0,44,1);R(c,0x3f4454,0,5,44,1);R(c,0x565c6d,1,6,42,5);R(c,0x3f4454,1,11,42,1);R(c,0x2e3240,4,12,3,3);R(c,0x2e3240,37,12,3,3)});
+mk('pillar',16,60,c=>{R(c,0x5a6072,0,0,16,8);R(c,0x7a829a,3,2,10,4);R(c,0x3c4356,3,8,10,46);R(c,0x566079,3,8,3,46);R(c,0x2e3446,11,8,2,46);R(c,0x59607a,1,54,14,6)});
+mk('plant',14,18,c=>{R(c,0x2f7d4f,1,6,4,2);R(c,0x2f7d4f,9,6,4,2);R(c,0x3fa363,5,1,4,9);R(c,0x2a6e45,3,3,3,5);R(c,0x2a6e45,8,3,3,5);R(c,0xa06a48,2,10,10,2);R(c,0x8a5a3c,3,12,8,6)});
+mk('vend',18,30,c=>{R(c,0x2d4a7a,0,0,18,30);R(c,0x1b2f52,0,0,18,2);R(c,0x0d1626,2,3,14,18);const cs=[0xe85d5d,0xf2b03e,0x5dd08a,0x5db0e8,0xd77ae8];for(let i=0;i<4;i++)for(let j=0;j<5;j++)R(c,cs[(i+j)%5],3+j*3,4+i*4,2,3);R(c,0x05080f,3,23,12,4);R(c,0xffd27a,14,22,2,1)});
+mk('shutter',44,32,c=>{R(c,0x2a2f3c,0,0,44,32);for(let y=2;y<32;y+=3)R(c,0x1c202b,0,y,44,1);R(c,0x3c4356,0,0,44,2)});
+mk('lamp',8,10,c=>{R(c,0x22222b,1,0,6,2);R(c,0xffd27a,1,2,6,6);R(c,0xfff0c0,3,3,2,3);R(c,0x22222b,2,8,4,2)});
+mk('glow',48,48,c=>{const g=c.createRadialGradient(24,24,0,24,24,24);g.addColorStop(0,'rgba(255,200,110,.85)');g.addColorStop(1,'rgba(255,200,110,0)');c.fillStyle=g;c.fillRect(0,0,48,48)});
+[[0xd9a25c,0x8a4a2a],[0x3d5f9a,0xa9c1e8],[0xc97a4a,0xf0d9b0]].forEach((p,i)=>mk('po'+i,12,16,c=>{R(c,p[0],0,0,12,16);R(c,p[1],1,1,10,5);R(c,0xe8dcc0,2,8,8,1);R(c,0xe8dcc0,2,10,6,1);R(c,0xe8dcc0,2,12,7,1)}));
+mk('sign',76,11,c=>{R(c,0x4a5d80,0,0,76,11);R(c,0x1a2438,1,1,74,9);c.font='bold 7px monospace';c.textAlign='center';c.fillStyle='#a9c1e8';c.fillText('LINE 3 · DOWNTOWN',38,8)});
+mk('exit',20,8,c=>{R(c,0x0b3a22,0,0,20,8);c.font='bold 6px monospace';c.textAlign='center';c.fillStyle='#5dff9b';c.fillText('EXIT',10,6)});
+mk('map',28,18,c=>{R(c,0x3a4560,0,0,28,18);R(c,0x1a2438,1,1,26,16);R(c,0xe8873a,3,5,22,1);R(c,0x5db0e8,6,12,18,1);R(c,0x5dd08a,9,3,1,12);R(c,0xd77ae8,18,3,1,12)});
+mk('trash',10,13,c=>{R(c,0xd8dde8,2,0,3,3);R(c,0xd8dde8,5,1,3,2);R(c,0x687288,0,2,10,2);R(c,0x4a5262,1,4,8,9);R(c,0x3a4252,3,4,1,9);R(c,0x3a4252,6,4,1,9)});
+mk('tree',36,48,c=>{R(c,0x3a2a22,15,34,6,14);R(c,0x2a1f1a,15,34,2,14);const cs=[[18,20,16],[10,24,10],[26,24,10],[18,10,12]];cs.forEach(q=>{c.fillStyle=css(0x2a6a4a);c.beginPath();c.arc(q[0],q[1],q[2],0,7);c.fill()});cs.forEach(q=>{c.fillStyle=css(0x3a8a5c);c.beginPath();c.arc(q[0]-3,q[1]-3,q[2]*.55,0,7);c.fill()})});
+mk('post',6,30,c=>{R(c,0x2a2f3c,2,6,2,24);R(c,0x3a4256,1,28,4,2);R(c,0x2a2f3c,0,2,6,4);R(c,0xffd27a,1,3,4,3)});
+mk('bush',16,10,c=>{R(c,0x2a6a4a,1,3,14,7);R(c,0x2a6a4a,3,1,10,3);R(c,0x3a8a5c,3,3,4,2);R(c,0xd77a9a,9,5,2,2);R(c,0xf2b03e,5,7,2,2)});
+mk('pond',96,40,c=>{c.fillStyle='#5a6070';c.beginPath();c.ellipse(48,20,47,19,0,0,7);c.fill();c.fillStyle='#1b3a6a';c.beginPath();c.ellipse(48,20,43,16,0,0,7);c.fill();c.fillStyle='#2c5a9a';c.beginPath();c.ellipse(44,17,28,9,0,0,7);c.fill();R(c,'#7fb0e8',30,14,14,1);R(c,'#7fb0e8',52,20,18,1);R(c,'#7fb0e8',36,24,10,1)});
+mk('dot',2,2,c=>R(c,0xffffff,0,0,2,2));
+mk('mark',5,5,c=>{R(c,0xffd27a,2,0,1,1);R(c,0xffd27a,1,1,3,1);R(c,0xffd27a,0,2,5,1);R(c,0xffd27a,1,3,3,1);R(c,0xffd27a,2,4,1,1)});
+mk('shadow',24,8,c=>{c.fillStyle='rgba(0,0,0,.55)';c.beginPath();c.ellipse(12,4,11,3,0,0,7);c.fill()});
+mk('puddle',40,14,c=>{c.fillStyle='rgba(70,130,220,.55)';c.beginPath();c.ellipse(20,7,19,6,0,0,7);c.fill();c.fillStyle='rgba(150,200,255,.5)';c.beginPath();c.ellipse(15,5,8,2,0,0,7);c.fill()});
+mk('player',12,17,c=>{R(c,0x5a3c2a,0,4,3,8);R(c,0x7a5238,2,0,8,8);R(c,0x9a6a48,3,1,6,2);R(c,0x2a1a12,4,3,4,4);R(c,0xe0b090,4,4,4,3);R(c,0x8a5a3c,3,8,6,6);R(c,0x33261f,4,14,2,3);R(c,0x33261f,7,14,2,3);R(c,0x3a2a1a,9,7,3,6);R(c,0xffc84a,10,8,1,4)});
+LEVELS.forEach((L,l)=>L.npcs.forEach((n,i)=>[0,1].forEach(g=>mk((g?'ng':'nc')+l+i,12,18,c=>{const f=g?gr:x=>x,q=n.c;
+if(n.hood){R(c,f(q.h),2,0,8,6);R(c,f(dk(q.h)),4,3,4,3);R(c,f(q.s),4,4,4,2)}else{R(c,f(q.r),3,0,6,4);R(c,f(q.s),4,3,4,3)}
+R(c,f(q.b),2,6,8,6);R(c,f(dk(q.b)),2,8,8,1);R(c,f(q.p),3,12,3,4);R(c,f(q.p),6,12,3,4);R(c,f(0x1a1a22),3,16,3,2);R(c,f(0x1a1a22),6,16,3,2)}))));
+}
+egg(){
+if(this.textures.exists('egg'))return;
+const t=this.textures.createCanvas('egg',34,20),c=t.context;
+c.strokeStyle='#b06fd6';c.fillStyle='rgba(176,111,214,.55)';c.lineWidth=1.1;
+c.beginPath();c.moveTo(5,7);c.bezierCurveTo(2,3,7,1,8,5);c.bezierCurveTo(9,1,14,3,11,7);c.bezierCurveTo(9,10,8,11,8,11);c.bezierCurveTo(8,11,7,10,5,7);c.fill();c.stroke();
+c.beginPath();c.moveTo(11,5);c.quadraticCurveTo(17,1,20,4);c.quadraticCurveTo(16,5,15,7);c.quadraticCurveTo(19,7,20,10);c.quadraticCurveTo(15,10,11,7);c.stroke();
+c.beginPath();c.moveTo(5,5);c.quadraticCurveTo(-1,1,-4,4);c.quadraticCurveTo(0,5,1,7);c.quadraticCurveTo(-3,7,-4,10);c.quadraticCurveTo(1,10,5,7);c.stroke();
+c.font="italic bold 8px Georgia";c.fillStyle='rgba(176,111,214,.6)';c.fillText('keyssi',9,18);
+t.refresh();
+this.add.image(203,33,'egg').setOrigin(.5,1).setDepth(3.4).setPipeline('Light2D').setAngle(-3);
+}
+P(k,x,y,o={}){if(o.sh!==false)this.add.image(x,y-1,'shadow').setAlpha(.6).setScale(o.sw||1.4,1).setDepth(y-1);return this.add.image(x,y,k).setOrigin(.5,1).setDepth(o.d||y).setPipeline('Light2D')}
+hearts(n){document.querySelectorAll('#cs .h').forEach((h,i)=>h.classList.toggle('on',i<n));el.n.textContent=n}
+life(){document.querySelectorAll('#vs .v').forEach((h,i)=>h.classList.toggle('on',i<this.vida))}
+create(){
+document.activeElement&&document.activeElement.blur();const LV=Math.min(window.lv|0,LEVELS.length-1);window.lv=LV;this.LV=LV;M.lit=0;M.go(LV);$('lvt').textContent=LEVELS[LV].t;this.tex();this.lit=0;this.vida=5;this.score=0;el.vs.innerHTML='<svg class="v on" viewBox="0 0 24 22"><path d="M12 21s-9-5.6-9-12A5 5 0 0 1 12 6a5 5 0 0 1 9 3c0 6.4-9 12-9 12z"/></svg>'.repeat(5);this.near=null;this.typing=0;clearInterval(this.iv);
+this.state=window.played?'play':'title';
+this.hearts(0);el.dlg.classList.remove('on');el.prompt.style.opacity=0;el.end.classList.remove('on','msg');el.over.classList.remove('on');
+if(!LV){const d=[];for(let y=0;y<15;y++){const r=[];for(let x=0;x<30;x++)r.push(y<3?0:y<12?1+((x*7+y*13)%5===0?1:0):y===12?3:y===13?4:5);d.push(r)}
+const m=this.make.tilemap({data:d,tileWidth:T,tileHeight:T});
+m.createLayer(0,m.addTilesetImage('tiles','tiles',T,T),0,0).setPipeline('Light2D');
+this.lights.enable().setAmbientColor(amb(0));
+this.egg();
+this.add.image(240,50,'shutter').setOrigin(.5,1).setDepth(3).setPipeline('Light2D').setPosition(432,47);
+this.P('sign',240,14,{sh:false,d:4});this.P('exit',58,15,{sh:false,d:4});
+[[121,33,0],[142,33,1],[160,33,2],[352,33,1]].forEach(p=>this.P('po'+p[2],p[0],p[1],{sh:false,d:5}));
+this.P('map',318,38,{sh:false,d:5});
+this.P('vend',25,46,{sh:false,d:6});this.P('vend',378,46,{sh:false,d:6});
+[96,202,275,397].forEach(x=>{this.lights.addLight(x,34,95,0xffc46b,1.05)});
+[23,96,202,275,397,459].forEach(x=>{this.P('lamp',x,22,{sh:false,d:6});this.add.image(x,18,'glow').setBlendMode('ADD').setAlpha(.55).setDepth(7)});
+[[25,26],[378,26]].forEach(p=>this.add.image(p[0],p[1],'glow').setBlendMode('ADD').setAlpha(.35).setScale(1.2).setTint(0x88b8ff).setDepth(7));
+[[197,49],[277,49],[115,137],[392,137],[464,70],[464,100],[458,132],[458,58]].forEach(p=>this.P('plant',p[0],p[1],{sw:.7}));
+[[396,50],[100,186],[300,186]].forEach(p=>this.P('trash',p[0],p[1],{sw:.5}));
+[[137,137,1],[343,134,1.1],[259,176,1],[326,163,.7]].forEach(p=>this.add.image(p[0],p[1],'puddle').setBlendMode('ADD').setAlpha(.32).setScale(p[2]).setDepth(2));
+const zone=(x,y,w,h)=>{const z=this.add.zone(x,y,w,h);this.physics.add.existing(z,true);return z};
+this.blocks=[];
+[61,155,321,420].forEach(x=>{this.P('bench',x,66);this.blocks.push(zone(x,62,42,8))});
+[47,148,398].forEach(x=>{this.P('bench',x,176);this.blocks.push(zone(x,172,42,8))});
+[100,182,295,378].forEach(x=>{this.P('pillar',x,138,{sw:1});this.blocks.push(zone(x,133,12,10))});
+}else this.park();
+this.npcs=LEVELS[LV].npcs.map((n,i)=>{const o={...n,i,lit:false,r:0};
+o.gray=this.add.image(n.x,n.y,'ng'+LV+i).setOrigin(.5,1).setDepth(n.y+1).setPipeline('Light2D');
+o.col=this.add.image(n.x,n.y,'nc'+LV+i).setOrigin(.5,1).setDepth(n.y+2).setPipeline('Light2D').setAlpha(0);
+o.light=this.lights.addLight(n.x,n.y-10,80,0xffb84d,0);
+o.mark=this.add.image(n.x,n.y-26,'mark').setDepth(800).setBlendMode('ADD').setAlpha(.8);
+this.tweens.add({targets:o.mark,y:n.y-29,alpha:.35,yoyo:true,repeat:-1,duration:900,ease:'Sine.inOut'});
+o.em=this.add.particles(n.x,n.y-8,'dot',{speed:{min:20,max:75},lifespan:1000,scale:{start:1.5,end:0},blendMode:'ADD',tint:[0xffd27a,0xffa94d,0xfff1b8],gravityY:-25,emitting:false}).setDepth(850);
+return o});
+this.add.particles(0,0,'dot',{emitZone:{type:'random',source:new Phaser.Geom.Rectangle(0,20,WW,200)},lifespan:{min:5000,max:9000},speedX:{min:-5,max:5},speedY:{min:-5,max:2},alpha:{start:.55,end:0},scale:{min:.4,max:.9},frequency:90,tint:0xffdca0,blendMode:'ADD'}).setDepth(900);
+this.p=this.physics.add.image(240,118,'player').setOrigin(.5,1).setPipeline('Light2D');
+this.p.body.setSize(8,5).setOffset(2,12);this.p.setDrag(720).setMaxVelocity(62).setCollideWorldBounds(true);
+this.physics.world.setBounds(...LEVELS[LV].b);
+this.blocks.forEach(b=>this.physics.add.collider(this.p,b));
+this.pl=this.lights.addLight(240,110,105,0xffc873,2.3);
+const cam=this.cameras.main;cam.setBounds(0,0,WW,WH).startFollow(this.p,true,.07,.07).setRoundPixels(true);
+if(this.renderer.type===Phaser.WEBGL)cam.postFX.addVignette(.5,.5,.88,.42);
+cam.fadeIn(1200,5,7,13);this.k=this.input.keyboard.addKeys({W:'W',A:'A',S:'S',D:'D',U:'UP',Dn:'DOWN',L:'LEFT',R:'RIGHT'});
+this.input.keyboard.removeAllListeners('keydown-E');
+this.input.keyboard.on('keydown-E',()=>this.act());this.input.keyboard.on('keydown-SPACE',()=>this.act());
+this.input.keyboard.on('keydown-M',()=>$('mu').click());this.input.keyboard.on('keydown-ONE',()=>this.pick(0));this.input.keyboard.on('keydown-TWO',()=>this.pick(1));this.input.keyboard.on('keydown-THREE',()=>this.pick(2));
+this.input.keyboard.on('keydown',()=>this.begin());
+el.start.onclick=()=>this.begin();
+el.again.onclick=()=>{this.scene.restart()};el.retry.onclick=()=>this.scene.restart();el.nx.onclick=()=>{if(LV<LEVELS.length-1)window.lv=LV+1;this.scene.restart()};
+if(this.state==='play'){el.start.classList.add('off');el.hud.style.opacity=1}else{el.start.classList.remove('off');el.hud.style.opacity=0}
+}
+begin(){if(this.state!=='title')return;A.init();M.go(window.lv|0);window.played=true;this.state='play';el.start.classList.add('off');el.hud.style.opacity=1}
+act(){if(this.state==='play'&&this.near)this.open(this.near);else if(this.typing)this.endType()}
+park(){
+this.lights.enable().setAmbientColor(amb(0));
+const d=[];for(let y=0;y<15;y++){const r=[];for(let x=0;x<30;x++)r.push(y===7||y===8||x===14||x===15?8:6+((x*5+y*11)%4===0?1:0));d.push(r)}
+const m=this.make.tilemap({data:d,tileWidth:T,tileHeight:T});
+m.createLayer(0,m.addTilesetImage('tiles','tiles',T,T),0,0).setPipeline('Light2D');
+const zone=(x,y,w,h)=>{const z=this.add.zone(x,y,w,h);this.physics.add.existing(z,true);return z};
+this.blocks=[];
+this.add.image(150,206,'pond').setDepth(2).setPipeline('Light2D');
+this.add.image(150,206,'glow').setBlendMode('ADD').setAlpha(.25).setScale(2.4,1.1).setTint(0x6aa8ff).setDepth(3);
+this.blocks.push(zone(150,206,80,22));
+[[24,46],[84,46],[150,46],[320,46],[392,46],[456,46],[14,124],[466,130],[26,232],[452,232]].forEach(p=>{this.P('tree',p[0],p[1],{sw:1.6});this.blocks.push(zone(p[0],p[1]-4,10,8))});
+[[200,64],[280,64],[40,178],[430,176],[310,150],[190,150]].forEach(p=>this.P('bush',p[0],p[1],{sw:.8}));
+LEVELS[1].npcs.forEach(n=>{this.P('bench',n.x,n.y);this.blocks.push(zone(n.x,n.y-4,42,8))});
+[[96,110],[376,110],[280,214]].forEach(p=>{this.P('post',p[0],p[1],{sw:.4});this.lights.addLight(p[0],p[1]-26,105,0xffc46b,1.15);this.add.image(p[0],p[1]-26,'glow').setBlendMode('ADD').setAlpha(.6).setDepth(p[1]+1)});
+this.add.particles(0,0,'dot',{emitZone:{type:'random',source:new Phaser.Geom.Rectangle(0,50,WW,180)},lifespan:{min:2500,max:4500},speed:{min:3,max:9},alpha:{start:.95,end:0},frequency:230,tint:0xc8ff7a,blendMode:'ADD'}).setDepth(901)}
+open(n){this.state='dialog';this.cur=n;el.prompt.style.opacity=0;el.who.textContent=n.who;el.opts.innerHTML='';el.dlg.classList.add('on');this.ask()}
+ask(){const rd=this.cur.rounds[this.cur.r];this.left=rd[1].slice();this.say(rd[0],()=>this.showOpts())}
+say(t,cb){clearInterval(this.iv);this.typing=1;this.full=t;this.cb=cb;let i=0;el.txt.textContent='';this.iv=setInterval(()=>{i++;el.txt.textContent=t.slice(0,i);if(i%2===0)A.tick();if(i>=t.length)this.endType()},26)}
+endType(){if(!this.typing)return;clearInterval(this.iv);this.typing=0;el.txt.textContent=this.full;this.cb&&this.cb()}
+showOpts(){if(this.state!=='dialog')return;this.shown=Phaser.Utils.Array.Shuffle(this.left.slice());el.opts.innerHTML='';this.shown.forEach((o,i)=>{const b=document.createElement('button');b.innerHTML='<i>'+(i+1)+'</i>'+o[1];b.onclick=()=>this.pick(i);el.opts.appendChild(b)})}
+pick(i){if(this.state!=='dialog'||this.typing||!this.shown||!el.opts.children.length)return;const o=this.shown[i];if(!o)return;const n=this.cur;this.state='reply';el.opts.innerHTML='';
+if(o[0]==='e'){this.score+=100;A.tone(880,0,.4,.06);this.say(o[2],()=>this.time.delayedCall(1300,()=>{n.r++;if(n.r>=n.rounds.length)this.after(n);else{this.state='dialog';this.ask()}}))}
+else{this.vida=Math.max(0,this.vida-(o[0]==='x'?2:1));this.life();A.tone(220,0,.35,.09,'triangle');A.tone(165,.15,.5,.09,'triangle');this.left=this.left.filter(q=>q!==o);this.cameras.main.shake(120,.003);
+this.say(Phaser.Utils.Array.GetRandom(o[0]==='x'?XR:NR),()=>this.time.delayedCall(1300,()=>{if(this.vida<=0)this.lose();else{this.state='dialog';this.showOpts()}}))}}
+after(n){el.dlg.classList.remove('on');if(n.mg&&MG[n.mg]){this.state='mini';MG[n.mg](this,()=>this.light(n))}else this.light(n)}
+day(){this.tweens.addCounter({from:0,to:1,delay:1800,duration:3200,onUpdate:t=>{const v=t.getValue(),c=amb(1),f=x=>Math.round(x+(255-x)*v);this.lights.setAmbientColor((f(c>>16&255)<<16)|(f(c>>8&255)<<8)|f(c&255))}});this.time.delayedCall(1800,()=>{A.tone(1046.5,0,3.5,.06,'sine',1);this.cameras.main.flash(1200,255,225,160)})}
+lose(){this.state='over';el.dlg.classList.remove('on');this.cameras.main.fadeOut(900,5,7,13);this.time.delayedCall(900,()=>el.over.classList.add('on'))}
+light(n){
+el.dlg.classList.remove('on');n.lit=true;this.lit++;this.hearts(this.lit);M.lit=this.lit;A.chime();
+this.cameras.main.shake(150,.006);
+this.tweens.add({targets:n.col,alpha:1,duration:1000});this.tweens.add({targets:n.gray,alpha:0,duration:1000});
+this.tweens.add({targets:n.light,intensity:1.8,duration:1000});this.tweens.add({targets:n.mark,alpha:0,duration:300});
+n.em.explode(34);
+const from=(this.lit-1)/3,to=this.lit/3;
+this.tweens.addCounter({from,to,duration:1600,onUpdate:t=>this.lights.setAmbientColor(amb(t.getValue()))});
+if(this.lit>=3){this.state='end';this.day();this.time.delayedCall(6200,()=>{A.win();el.pts.textContent=LEVELS[this.LV].t+' completado · Puntos: '+this.score;el.nx.style.display=this.LV<LEVELS.length-1?'':'none';el.end.classList.add('on');setTimeout(()=>el.end.classList.add('msg'),2800)})}else this.state='play'}
+update(t){
+if(this.state!=='play'){this.p.setAcceleration(0);if(this.state!=='title'&&this.state!=='play')el.prompt.style.opacity=0;return}
+const k=this.k,x=(k.D.isDown||k.R.isDown)-(k.A.isDown||k.L.isDown),y=(k.S.isDown||k.Dn.isDown)-(k.W.isDown||k.U.isDown),l=Math.hypot(x,y)||1;
+this.p.setAcceleration(x/l*540,y/l*540);if(x)this.p.setFlipX(x<0);
+const mv=Math.abs(this.p.body.velocity.x)+Math.abs(this.p.body.velocity.y)>10;
+this.p.setDepth(this.p.y);this.p.scaleY=1+(mv?Math.sin(t/70)*.045:0);
+this.pl.setPosition(this.p.x+(this.p.flipX?-5:5),this.p.y-7);this.pl.radius=105+Math.sin(t/230)*4+Math.sin(t/97)*2.5;
+let best=null,bd=80;this.npcs.forEach(n=>{if(n.lit)return;const d=Phaser.Math.Distance.Between(this.p.x,this.p.y-6,n.x,n.y-8);if(d<bd){bd=d;best=n}});
+this.near=best;el.prompt.style.opacity=best?1:0}
+}
+new Phaser.Game({type:Phaser.AUTO,width:W,height:H,parent:'game',pixelArt:true,roundPixels:true,backgroundColor:'#05070d',physics:{default:'arcade'},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:Main});
+</script>
+</body>
+</html>
